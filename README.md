@@ -15,9 +15,7 @@ Authors:
 - Row: `0 mod 8 = 0`
 - Col: `6 mod 8 = 6`
 - → **(0, 6)** ✓
-
 ---
-
 ## ID 2 — 20220188
 **Obstacle 1** (from d7, d8):
 - Row: `8 mod 8 = 0`
@@ -29,9 +27,7 @@ Authors:
 - Col: `1 mod 8 = 1`
 - Raw result: **(0, 1)** — ⚠️ already occupied by Obstacle 1 (shifted above)
 - → Shifted to **(0, 2)** ✓
-
 ---
-
 ## ID 3 — 20230995
 **Obstacle 1** (from d7, d8):
 - Row: `9 mod 8 = 1`
@@ -42,5 +38,4 @@ Authors:
 - Col: `9 mod 8 = 1`
 - Raw result: **(0, 1)** — ⚠️ already occupied (ID 2, Obstacle 1)
 - → Shifted to **(0, 3)** ✓
-
 ---
