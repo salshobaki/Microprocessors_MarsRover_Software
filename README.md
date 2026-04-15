@@ -11,6 +11,7 @@ Authors:
 - Row: `5 mod 8 = 5`
 - Col: `1 mod 8 = 1`
 - → **(5, 1)** ✓
+
 **Obstacle 2** 
 - Row: `0 mod 8 = 0`
 - Col: `6 mod 8 = 6`
@@ -22,6 +23,7 @@ Authors:
 - Col: `8 mod 8 = 0`
 - Raw result: **(0, 0)** — ⚠️ collision with Rover start position
 - → Shifted to **(0, 1)** ✓
+
 **Obstacle 2** 
 - Row: `0 mod 8 = 0`
 - Col: `1 mod 8 = 1`
@@ -33,6 +35,7 @@ Authors:
 - Row: `9 mod 8 = 1`
 - Col: `5 mod 8 = 5`
 - → **(1, 5)** ✓
+
 **Obstacle 2** 
 - Row: `0 mod 8 = 0`
 - Col: `9 mod 8 = 1`
