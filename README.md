@@ -8,7 +8,7 @@ Obstacles:
 * From ID 1: 20210651
 Row: 5 mod 8 = 5
 Col: 1 mod 8 = 1
-Row: 0 mod 8 = 0
+\Row: 0 mod 8 = 0
 Col: 6 mod 8 = 6
 -> (5,1) (0,6)
 -----------------------
