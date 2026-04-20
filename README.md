@@ -2,7 +2,7 @@
 Authors:
 * Sarah Shobaki
 * Abdulrhman Atassi
-* Kareem Abusharkh
+* Kareem Abu Sharkh
 
 # Grid Obstacles — Coordinate Calculation
 
