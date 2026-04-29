@@ -1,0 +1,33 @@
+; ============================================
+; Mars Rover Grid Navigator
+; Princess Sumaya University for Technology
+; 22344 - Microprocessors | Spring 2026
+; ============================================
+
+data segment
+    INCLUDE data.inc
+ends
+
+stack segment
+    dw 128 dup(0)
+ends
+
+code segment
+start:
+    mov ax, data
+    mov ds, ax
+    mov es, ax
+
+    INCLUDE sarah_map.inc
+    INCLUDE kareem_input.inc
+    INCLUDE abdulrhman_logic.inc
+
+    CALL DRAW_GRID
+    CALL GET_COMMANDS
+    CALL RUN_SEQUENCE
+
+    mov ax, 4c00h
+    int 21h
+
+ends
+end start
