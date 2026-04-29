@@ -8,7 +8,7 @@ Owns everything visual.
 * Display the legend, battery level, and all status messages ("MISSION SUCCESS!", "CRITICAL FAILURE!", etc.)
 *Delivers: A procedure DRAW_GRID that takes the current rover position and redraws the full screen, plus the initialized grid data in memory.*
 -----------------------------------------------------------------------------------------------------------------------------
-**Person 2 — Input & Validation**
+**Kareem — Input & Validation**
 Owns everything the user types.
 
 * Display the input prompt
@@ -18,7 +18,7 @@ Owns everything the user types.
 * Store the cleaned command string in a shared buffer
 *Delivers: A procedure GET_COMMANDS that fills a shared buffer with a validated, uppercase command string and a length variable.*
 -----------------------------------------------------------------------------------------------------------------------------
-**Person 3 — Movement & Logic**
+**Abdulrhman — Movement & Logic**
 Owns everything that happens during execution.
 
 * Loop through the command buffer character by character
