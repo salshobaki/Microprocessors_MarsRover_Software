@@ -47,14 +47,13 @@ stack segment
 ends
 
 code segment
+    INCLUDE sarah_map.inc
+    INCLUDE kareem_input.inc
+    INCLUDE abdulrhman_logic.inc
 start:
     mov ax, data
     mov ds, ax
     mov es, ax
-
-    INCLUDE sarah_map.inc
-    INCLUDE kareem_input.inc
-    INCLUDE abdulrhman_logic.inc
 
     CALL DRAW_GRID
     CALL GET_COMMANDS
