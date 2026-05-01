@@ -10,9 +10,24 @@ fuel        db 20               ; starts at 20, -1 per valid move
 cmd_buffer  db 21 dup(0)        ; filled by GET_COMMANDS (max 20 chars + null)
 cmd_length  db 0                ; number of valid commands entered
 obs_count   db 6                ; total number of obstacles
-obstacles   db 0,1              ; obstacle 1 → row, col
-            db 5,0              ; obstacle 2 → row, col
-            db 2,0              ; obstacle 3 → row, col
-            db 2,3              ; obstacle 4 → row, col
-            db 5,6              ; obstacle 5 → row, col
-            db 1,7              ; obstacle 6 → row, col
+obstacles   db 5,1              ; ID1 Obs1
+            db 0,6              ; ID1 Obs2
+            db 0,1              ; ID2 Obs1 (shifted from 0,0)
+            db 0,2              ; ID2 Obs2 (shifted from 0,1)
+            db 1,5              ; ID3 Obs1
+            db 0,3              ; ID3 Obs2 (shifted from 0,1)
+
+; ============================================
+; Sarah's display variables (sarah_map.inc)
+; ============================================
+row_cnt     db 0
+title_msg   db 'MARS ROVER NAVIGATION SYSTEM', 0Dh, 0Ah, '$'
+col_header  db '   0 1 2 3 4 5 6 7', 0Dh, 0Ah, '$'
+legend_msg  db 'Legend: [R] = Rover, [O] = Crater/obstacle, [.] = Empty Space', 0Dh, 0Ah, '$'
+batt_msg    db 'Battery Level: $'
+batt_units  db ' Units', 0Dh, 0Ah, '$'
+success_msg db 0Dh, 0Ah, 'MISSION SUCCESS!', 0Dh, 0Ah, '$'
+crash_msg   db 0Dh, 0Ah, 'CRITICAL FAILURE!', 0Dh, 0Ah
+            db 'Rover crashed into a crater.', 0Dh, 0Ah, '$'
+bound_msg   db 0Dh, 0Ah, 'Error: Boundary breach!', 0Dh, 0Ah
+            db 'Mission Aborted.', 0Dh, 0Ah, '$'
