@@ -31,3 +31,13 @@ crash_msg   db 0Dh, 0Ah, 'CRITICAL FAILURE!', 0Dh, 0Ah
             db 'Rover crashed into a crater.', 0Dh, 0Ah, '$'
 bound_msg   db 0Dh, 0Ah, 'Error: Boundary breach!', 0Dh, 0Ah
             db 'Mission Aborted.', 0Dh, 0Ah, '$'
+
+; ============================================
+; Kareem's input-handelling variables (kareem_input.inc)
+; ============================================
+prompt_msg  db " Enter movement sequence (U, D, L, R Max 20 chars): $"
+error_msg   db 0Dh, 0Ah, " Invalid input! Try again.", 0Dh, 0Ah, "$"
+newline     db 0Dh, 0Ah, " $"
+raw_buffer  db 21 
+nthg        db 1       
+user_input  db 21 DUP(0) 
