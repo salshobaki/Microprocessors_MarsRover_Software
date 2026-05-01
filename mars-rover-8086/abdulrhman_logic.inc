@@ -46,29 +46,6 @@ RUN_SEQUENCE PROC
     mov bl, rover_row
     mov bh, rover_col
 
-    ; print (bl, bh)
-    push ax
-        mov ah, 02h
-        mov dl, '('
-        int 21h
-
-        mov al, bl
-        call print_small
-
-        mov dl, ','
-        int 21h
-
-        mov dl, ' '
-        int 21h
-
-        mov al, bh
-        call print_small
-
-        mov dl, ')'
-        int 21h
-    pop ax
-    ; print END
-
 
     cmp al, 'U'
     je DO_UP
@@ -187,23 +164,23 @@ RUN_SEQUENCE PROC
 RUN_SEQUENCE ENDP
 
 
-print_small proc
-    cmp al, -1
-    jne not_minus_one
+; print_small proc
+;     cmp al, -1
+;     jne not_minus_one
 
-    ; print "-1"
-    mov ah, 02h
-    mov dl, '-'
-    int 21h
+;     ; print "-1"
+;     mov ah, 02h
+;     mov dl, '-'
+;     int 21h
 
-    mov dl, '1'
-    int 21h
-    ret
+;     mov dl, '1'
+;     int 21h
+;     ret
 
-not_minus_one:
-    add al, '0'      ; convert 0–8 to ASCII
-    mov dl, al
-    mov ah, 02h
-    int 21h
-    ret
-print_small endp
+; not_minus_one:
+;     add al, '0'      ; convert 0–8 to ASCII
+;     mov dl, al
+;     mov ah, 02h
+;     int 21h
+;     ret
+; print_small endp
