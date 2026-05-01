@@ -8,7 +8,7 @@
 ;   - cmd_length  (number of commands stored)
 ; ============================================
 
-GET_COMMANDS PROC
+;GET_COMMANDS PROC
     ; TODO: print input prompt
     ;       "Enter movement sequence (U,D,L,R - Max 20 chars): "
     ; TODO: read up to 20 characters into cmd_buffer

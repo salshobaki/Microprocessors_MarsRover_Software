@@ -31,6 +31,7 @@ crash_msg   db 0Dh, 0Ah, 'CRITICAL FAILURE!', 0Dh, 0Ah
             db 'Rover crashed into a crater.', 0Dh, 0Ah, '$'
 bound_msg   db 0Dh, 0Ah, 'Error: Boundary breach!', 0Dh, 0Ah
             db 'Mission Aborted.', 0Dh, 0Ah, '$'
+grid_initialized db 0
 
 ; ============================================
 ; Kareem's input-handelling variables (kareem_input.inc)
@@ -41,3 +42,11 @@ newline     db 0Dh, 0Ah, " $"
 raw_buffer  db 21 
 nthg        db 1       
 user_input  db 21 DUP(0) 
+
+; ============================================
+; Abdulrhman's logic variables (abdulrhman_logic.inc)
+; ============================================
+; boundary_msg    db "Error: Boundary Breach!", 13, 10, "$"
+; collision_msg   db "CRITICAL FAILURE: Rover Crashed!", 13, 10, "$"
+; complete_msg    db "Sequence Complete. Fuel Remaining: $"
+current_status db 0 ; 0 = normal state, 1 = crash occurred, 2 = boundary violation, 3 = mission successful (fuel depleted)
