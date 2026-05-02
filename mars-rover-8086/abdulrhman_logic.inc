@@ -3,184 +3,164 @@
 ; Owner: Abdulrhman
 ; Delivers: RUN_SEQUENCE procedure
 ; ============================================
-; Reads from shared variables:
-;   - cmd_buffer  (command string from GET_COMMANDS)
-;   - cmd_length  (number of commands)
-;   - obstacles   (to check collisions)
-;   - obs_count   (number of obstacles)
-; Writes to shared variables:
-;   - rover_row   (updated after each valid move)
-;   - rover_col   (updated after each valid move)
-;   - fuel        (deduct 1 per valid move)
-; Calls:
-;   - DRAW_GRID   (after every valid move)
-; ============================================
 
 RUN_SEQUENCE PROC
-    ; TODO: set SI = offset cmd_buffer
-    ; TODO: set CX = cmd_length (loop counter)
-    mov si, offset cmd_buffer   ; point SI to the command string
-    mov cl, cmd_length           ; load length into CL
-    mov ch, 0                  ; clear CH so CX = length
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    PUSH SI
 
-    ; --- MAIN LOOP ---
-    LOOP_START:
-    ; TODO: read next character from [SI], increment SI
-    mov al, [si]               ; read one character
-    inc si                     ; move to next character
+    mov si, offset cmd_buffer
+    mov cl, cmd_length
+    mov ch, 0
 
-    ; print the character to screen (just to verify)
-    push ax
-    mov ah, 02h
-    mov dl, al
-    int 21h
+LOOP_START:
+    ; --- Read next command ---
+    mov al, [si]
+    inc si
 
-    ; newline
-    mov dl, 0Dh   ; carriage return
-    int 21h
-
-    mov dl, 0Ah   ; line feed
-    int 21h
-    pop ax
-    ; TODO: calculate new position based on command:
+    ; --- Load current position into BL, BH ---
     mov bl, rover_row
     mov bh, rover_col
 
-
+    ; --- Decode command ---
     cmp al, 'U'
     je DO_UP
-
     cmp al, 'D'
     je DO_DOWN
-
     cmp al, 'L'
     je DO_LEFT
-
     cmp al, 'R'
     je DO_RIGHT
+    jmp NEXT_CMD             ; unknown char — skip
 
-    ; U → rover_row - 1
-    DO_UP:
+DO_UP:
     dec bl
-    jmp BOUNDARY_VALIDATION
-    
-    ; D → rover_row + 1
-    DO_DOWN:
+    jmp BOUNDARY_CHECK
+
+DO_DOWN:
     inc bl
-    jmp BOUNDARY_VALIDATION
+    jmp BOUNDARY_CHECK
 
-    ; L → rover_col - 1
-    DO_LEFT:
+DO_LEFT:
     dec bh
-    jmp BOUNDARY_VALIDATION
-    
-    ; R → rover_col + 1
-    DO_RIGHT:
+    jmp BOUNDARY_CHECK
+
+DO_RIGHT:
     inc bh
-    jmp BOUNDARY_VALIDATION
-    
-    
-    BOUNDARY_VALIDATION:
-    ; TODO: BOUNDARY CHECK
-    ;       if new row < 0 or > 7 → print "Error: Boundary Breach!" → halt
+    jmp BOUNDARY_CHECK
+
+    ; --------------------------------------------------------
+    ; BOUNDARY CHECK
+    ; BL = new row, BH = new col
+    ; Valid range: 0-7 for both
+    ; --------------------------------------------------------
+BOUNDARY_CHECK:
     cmp bl, 8
-    je BOUNDARY_ERROR
-    cmp bl, -1
-    je BOUNDARY_ERROR
+    je DO_BOUNDARY_ERROR
+    cmp bl, 0FFh             ; -1 as unsigned byte
+    je DO_BOUNDARY_ERROR
     cmp bh, 8
-    je BOUNDARY_ERROR
-    cmp bh, -1
-    je BOUNDARY_ERROR
+    je DO_BOUNDARY_ERROR
+    cmp bh, 0FFh
+    je DO_BOUNDARY_ERROR
+    jmp OBSTACLE_CHECK
 
-    jmp OBS_VALIDATION
+DO_BOUNDARY_ERROR:
+    mov rover_row, bl        ; save target position for display
+    mov rover_col, bh
+    mov current_status, 2
+    jmp GAME_OVER
 
+    ; --------------------------------------------------------
+    ; OBSTACLE CHECK
+    ; Loop through all 6 obstacles
+    ; --------------------------------------------------------
+OBSTACLE_CHECK:
+    push si                  ; save command pointer
+    push cx                  ; save command counter
+    push bx                  ; save new position
 
-    BOUNDARY_ERROR:
-        ; mov ah, 09h
-        ; lea dx, boundary_msg
-        ; int 21h
-        mov current_status, 2
-        jmp EXIT_SEQUENCE
+    mov si, offset obstacles
+    mov cl, obs_count
+    mov ch, 0
 
-    ; TODO: COLLISION CHECK
-    ;       loop through obstacles array
-    ;       if new row,col matches any obstacle → beep + print "CRITICAL FAILURE!" → halt
-    OBS_VALIDATION:
-        push si
-        push cx 
-        mov si, offset obstacles
-        mov cl, obs_count
+OBS_LOOP:
+    mov al, [si]             ; obstacle row
+    cmp bl, al
+    jne OBS_NEXT             ; row doesn't match
 
-    OBS_LOOP:
-        cmp bl, [si]
-        jne OBS_NEXT
-        cmp bh, [si+1]
-        je OBS_ERROR
+    mov al, [si+1]           ; obstacle col
+    cmp bh, al
+    je DO_CRASH_ERROR        ; both match = crash!
 
-    OBS_NEXT:
-        add si, 2
-        loop OBS_LOOP
-    
-    pop cx 
-    pop si
-    call OBS_CORRECT
-    OBS_ERROR:
-        pop cx 
-        pop si
-        ; mov ah, 09h
-        ; lea dx, collision_msg
-        ; int 21h
-        mov current_status, 1
-        jmp EXIT_SEQUENCE
+OBS_NEXT:
+    add si, 2
+    loop OBS_LOOP
 
-    OBS_CORRECT:
-    ; TODO: VALID MOVE
-    ;       update rover_row / rover_col
+    ; --- No obstacle found = valid move ---
+    pop bx                   ; restore new position
+    pop cx                   ; restore command counter
+    pop si                   ; restore command pointer
+
+    ; --- Update rover position ---
     mov rover_row, bl
     mov rover_col, bh
-    ;       decrement fuel
+    mov current_status, 0
+
+    ; --- Deduct fuel ---
     dec fuel
     cmp fuel, 0
+    je FUEL_EMPTY
+    dec cx
+    jz FUEL_EMPTY
+
+
+    ; --- Draw this frame ---
+    call DRAW_GRID
+    call DELAY
+
+    ; --- Next command ---
+    cmp cx, 0
+    jnz LOOP_START
+
+    ; --- All commands done successfully ---
     mov current_status, 3
-    je EXIT_SEQUENCE
-    ;       CALL DRAW_GRID
-    CALL DRAW_GRID
-    ;       delay loop (so user can see movement)
+    call DRAW_GRID
+    jmp RUN_DONE
 
-    ; TODO: repeat loop until CX = 0
-    loop LOOP_START            ; CX--, repeat until CX = 0
-    ; --- SEQUENCE COMPLETE ---
-    ; TODO: print "Sequence Complete. Fuel Remaining: X"
-    ; mov ah, 09h
-    ; lea dx, complete_msg
-    ; int 21h
-    ; lea dx, fuel
-    ; int 21h
-    jmp EXIT_SEQUENCE
+FUEL_EMPTY:
+    mov current_status, 3
+    call DRAW_GRID
+    jmp RUN_DONE
 
-    EXIT_SEQUENCE:
-    CALL DRAW_GRID
-    RET
+DO_CRASH_ERROR:
+    pop bx                   ; restore new position (crash location)
+    pop cx
+    pop si
+    mov rover_row, bl        ; save crash position for X display
+    mov rover_col, bh
+    mov current_status, 1
+    jmp GAME_OVER
+
+GAME_OVER:
+    call DRAW_GRID           ; draws X or empty + error message
+
+RUN_DONE:
+    POP SI
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    ret
+
+NEXT_CMD:
+    dec cx
+    jnz LOOP_START
+    ; all commands processed
+    mov current_status, 3
+    call DRAW_GRID
+    jmp RUN_DONE
+
 RUN_SEQUENCE ENDP
-
-
-; print_small proc
-;     cmp al, -1
-;     jne not_minus_one
-
-;     ; print "-1"
-;     mov ah, 02h
-;     mov dl, '-'
-;     int 21h
-
-;     mov dl, '1'
-;     int 21h
-;     ret
-
-; not_minus_one:
-;     add al, '0'      ; convert 0–8 to ASCII
-;     mov dl, al
-;     mov ah, 02h
-;     int 21h
-;     ret
-; print_small endp

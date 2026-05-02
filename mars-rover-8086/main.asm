@@ -25,6 +25,9 @@ start:
     CALL GET_COMMANDS
     CALL RUN_SEQUENCE
 
+    ; wait for any key....    
+    mov ah, 1
+    int 21h
     mov ax, 4c00h
     int 21h
 
