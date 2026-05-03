@@ -20,19 +20,37 @@ obstacles   db 5,1              ; ID1 Obs1
 ; ============================================
 ; Sarah's display variables (sarah_map.inc)
 ; ============================================
-row_cnt     db 0
-title_msg   db 'MARS ROVER NAVIGATION SYSTEM', 0Dh, 0Ah, '$'
-col_header  db '   0 1 2 3 4 5 6 7', 0Dh, 0Ah, '$'
-legend_msg  db 'Legend: [R] = Rover, [O] = Crater/obstacle, [.] = Empty Space', 0Dh, 0Ah, '$'
-batt_msg    db 'Battery Level: $'
-batt_units  db ' Units', 0Dh, 0Ah, '$'
-success_msg db 0Dh, 0Ah, 'MISSION SUCCESS!', 0Dh, 0Ah, '$'
-crash_msg   db 0Dh, 0Ah, 'CRITICAL FAILURE!', 0Dh, 0Ah
-            db 'Rover crashed into a crater.', 0Dh, 0Ah, '$'
-bound_msg   db 0Dh, 0Ah, 'Error: Boundary breach!', 0Dh, 0Ah
-            db 'Mission Aborted.', 0Dh, 0Ah, '$'
-grid_initialized db 0
+grid_initialized  db 0         ; 0=first call, 1=already initialized
+last_drawn_row    db 0         ; row where R/X was last stamped
+last_drawn_col    db 0         ; col where R/X was last stamped
+row_cnt           db 0         ; internal row counter for grid printing
+initial_fuel      db 20        ; always 20, used to calculate fuel consumed
 
+title_msg         db 'MARS ROVER NAVIGATION SYSTEM', 0Dh, 0Ah, '$'
+col_header        db '   0 1 2 3 4 5 6 7', 0Dh, 0Ah, '$'
+legend_msg        db 'Legend: [R] = Rover, [O] = Crater/obstacle, [.] = Empty Space', 0Dh, 0Ah, '$'
+batt_msg          db 'Battery Level: $'
+batt_units        db ' Units', 0Dh, 0Ah, '$'
+
+; Crash message — row/col printed dynamically after this
+crash_line1       db 0Dh, 0Ah, 'CRITICAL FAILURE!', 0Dh, 0Ah
+                  db 'Rover crashed into a crater at coordinates (', '$'
+coord_comma       db ',', '$'
+coord_close       db ').', 0Dh, 0Ah, '$'
+aborted_msg       db 'Mission Aborted.', 0Dh, 0Ah
+                  db 'Press any key to exit...', '$'
+
+; Boundary message
+bound_msg         db 0Dh, 0Ah, 'Error: Boundary breach!', 0Dh, 0Ah
+                  db 'Mission Aborted.', 0Dh, 0Ah
+                  db 'Press any key to exit...', '$'
+
+; Success message — row/col/fuel printed dynamically after this
+success_line1     db 0Dh, 0Ah, 'MISSION SUCCESS!', 0Dh, 0Ah
+                  db 'Rover reached coordinates: (', '$'
+fuel_consumed_msg db 'Fuel Consumed: ', '$'
+remaining_msg     db 'Remaining Battery Level: ', '$'
+press_key_msg     db 'Press any key to exit...', '$'
 ; ============================================
 ; Kareem's input-handelling variables (kareem_input.inc)
 ; ============================================
