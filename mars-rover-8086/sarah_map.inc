@@ -354,7 +354,7 @@ DRAW_GRID ENDP
 ; ============================================================
 DELAY PROC
     PUSH CX
-    MOV CX, 0500h
+    MOV CX, 0080h 
 DELAY_LOOP:
     NOP
     LOOP DELAY_LOOP
