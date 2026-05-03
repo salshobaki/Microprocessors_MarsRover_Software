@@ -2,33 +2,37 @@
 ; sarah_map.inc — Map & Display
 ; Owner: Sarah (ID: 20220188)
 ; ============================================
+; PROCEDURES IN THIS FILE:
+;   DRAW_GRID          — master display procedure
+;                        call after every move
+;   DELAY              — animation pause
+;
+; PRIVATE (called internally by DRAW_GRID only):
+;   INIT_GRID
+;   CLEAR_SCREEN
+;   PRINT_NEWLINE
+;   DISPLAY_BATTERY
+;
 ; HOW TO USE:
+;   main.asm     → CALL DRAW_GRID  (shows initial map)
+;   Abdulrhman   → CALL DRAW_GRID  (after every move)
 ;
-; In main.asm:
-;   CALL DRAW_GRID          ← shows initial map (auto-initializes obstacles on first call)
+; current_status values (set by Abdulrhman):
+;   0 = normal     → redraw map, R at new position
+;   1 = crash      → stamp X at rover_row/rover_col
+;                    show CRITICAL FAILURE message
+;   2 = boundary   → no symbol stamped
+;                    show boundary breach message
+;   3 = success    → R at rover_row/rover_col
+;                    show MISSION SUCCESS message
 ;
-; In RUN_SEQUENCE (Abdulrhman), for each move:
-;   ; update rover_row or rover_col here
-;   ; decrement fuel here
-;   CALL DRAW_GRID          ← handles EVERYTHING: clears old rover, redraws, animates
-;   CALL DELAY              ← animation pause
-;
-; At game end (Abdulrhman):
-;   MOV AL, 0               ← 0=success, 1=crash, 2=boundary
-;   CALL DISPLAY_STATUS_MSG
+; IMPORTANT: When crash (status=1) or boundary (status=2),
+;   Abdulrhman must save the target position into
+;   rover_row / rover_col BEFORE calling DRAW_GRID
 ; ============================================
 
 ; ============================================================
 ; PROCEDURE: DRAW_GRID
-; Purpose:  Master display procedure.
-;           - First call: initializes obstacles then draws
-;           - Every call: clears old rover position, clears
-;             screen, stamps rover at new position, redraws
-;             full grid, and displays battery level.
-;           Abdulrhman only needs to update rover_row/rover_col
-;           and call DRAW_GRID — nothing else is required.
-; Inputs:   rover_row, rover_col, fuel, grid (from data.inc)
-; Outputs:  Full screen rendered
 ; ============================================================
 DRAW_GRID PROC
     PUSH AX
@@ -37,51 +41,98 @@ DRAW_GRID PROC
     PUSH DX
     PUSH SI
 
-    ; --- Check if this is the first call ---
+    ; --------------------------------------------------------
+    ; STEP 1: First call only — place all 6 obstacles
+    ; --------------------------------------------------------
     CMP BYTE PTR grid_initialized, 0
-    JNE SKIP_INIT            ; if already initialized, skip
-
-    ; --- First call only: place all 6 obstacles ---
+    JNE SKIP_INIT
     CALL INIT_GRID
-    MOV BYTE PTR grid_initialized, 1  ; set flag
+    MOV BYTE PTR grid_initialized, 1
 
 SKIP_INIT:
-    ; --- Clear rover's OLD position before moving ---
-    ;     (rover_row/rover_col already updated by caller)
-    CALL CLEAR_OLD_ROVER
 
-    ; --- Clear the screen ---
-    CALL CLEAR_SCREEN
-
-    ; --- Print title ---
-    LEA DX, title_msg
-    MOV AH, 09h
-    INT 21h
-
-    CALL PRINT_NEWLINE
-
-    ; --- Stamp R at rover's NEW (current) position ---
-    MOV AL, rover_row
+    ; --------------------------------------------------------
+    ; STEP 2: Clear the PREVIOUS R or X from grid array
+    ;         Uses last_drawn_row / last_drawn_col
+    ;         saved from the previous DRAW_GRID call
+    ; --------------------------------------------------------
+    MOV AL, last_drawn_row
     SHL AL, 1
     SHL AL, 1
-    SHL AL, 1                ; AL = rover_row * 8
-    ADD AL, rover_col        ; AL = offset
+    SHL AL, 1
+    ADD AL, last_drawn_col
     LEA BX, grid
     MOV AH, 0
     ADD BX, AX
-    MOV BYTE PTR [BX], 'R'
+    CMP BYTE PTR [BX], 'O'  ; never overwrite an obstacle
+    JE SKIP_CLEAR
+    MOV BYTE PTR [BX], '.'  ; clear old R or X
 
-    ; --- Print column header ---
+SKIP_CLEAR:
+
+    ; --------------------------------------------------------
+    ; STEP 3: Stamp correct symbol at rover_row / rover_col
+    ; --------------------------------------------------------
+    MOV AL, rover_row
+    SHL AL, 1
+    SHL AL, 1
+    SHL AL, 1
+    ADD AL, rover_col
+    LEA BX, grid
+    MOV AH, 0
+    ADD BX, AX               ; BX -> grid[rover_row][rover_col]
+
+    MOV CL, current_status
+
+    CMP CL, 2                ; boundary — rover off grid, stamp nothing
+    JE SAVE_LAST_DRAWN
+
+    CMP CL, 1                ; crash — stamp X
+    JE STAMP_X
+
+    MOV BYTE PTR [BX], 'R'  ; normal or success — stamp R
+    JMP SAVE_LAST_DRAWN
+
+STAMP_X:
+    MOV BYTE PTR [BX], 'X'
+
+    ; --------------------------------------------------------
+    ; STEP 4: Save current position as last drawn
+    ;         so next call knows what to clear
+    ; --------------------------------------------------------
+SAVE_LAST_DRAWN:
+    MOV AL, rover_row
+    MOV last_drawn_row, AL
+    MOV AL, rover_col
+    MOV last_drawn_col, AL
+
+    ; --------------------------------------------------------
+    ; STEP 5: Clear the screen
+    ; --------------------------------------------------------
+    CALL CLEAR_SCREEN
+
+    ; --------------------------------------------------------
+    ; STEP 6: Print title
+    ; --------------------------------------------------------
+    LEA DX, title_msg
+    MOV AH, 09h
+    INT 21h
+    CALL PRINT_NEWLINE
+
+    ; --------------------------------------------------------
+    ; STEP 7: Print column header
+    ; --------------------------------------------------------
     LEA DX, col_header
     MOV AH, 09h
     INT 21h
 
-    ; --- Print all 8 rows ---
+    ; --------------------------------------------------------
+    ; STEP 8: Print all 8 rows of the grid
+    ; --------------------------------------------------------
     LEA SI, grid
     MOV BYTE PTR row_cnt, 0
 
 DRAW_ROW:
-    ; -- Print row number --
     MOV DL, row_cnt
     ADD DL, '0'
     MOV AH, 02h
@@ -94,7 +145,6 @@ DRAW_ROW:
     MOV AH, 02h
     INT 21h
 
-    ; -- Print 8 cells --
     MOV CL, 8
 DRAW_CELL:
     MOV DL, [SI]
@@ -113,15 +163,183 @@ DRAW_CELL:
     CMP BYTE PTR row_cnt, 8
     JB DRAW_ROW
 
-    ; --- Print legend ---
+    ; --------------------------------------------------------
+    ; STEP 9: Print legend
+    ; --------------------------------------------------------
     CALL PRINT_NEWLINE
     LEA DX, legend_msg
     MOV AH, 09h
     INT 21h
 
-    ; --- Print battery level ---
+    ; --------------------------------------------------------
+    ; STEP 10: Print battery level
+    ; --------------------------------------------------------
     CALL DISPLAY_BATTERY
 
+    ; --------------------------------------------------------
+    ; STEP 11: Print end-of-game message if status != 0
+    ; --------------------------------------------------------
+    MOV CL, current_status
+
+    CMP CL, 1
+    JE DRAW_SHOW_CRASH
+
+    CMP CL, 2
+    JE DRAW_SHOW_BOUND
+
+    CMP CL, 3
+    JE DRAW_SHOW_SUCCESS
+
+    JMP DRAW_DONE            ; status 0 = normal move, no message
+
+    ; --------------------------------------------------------
+    ; CRASH MESSAGE:
+    ; CRITICAL FAILURE!
+    ; Rover crashed into a crater at coordinates (R,C).
+    ; Mission Aborted.
+    ; Press any key to exit...
+    ; --------------------------------------------------------
+DRAW_SHOW_CRASH:
+    MOV DL, 07h              ; beep sound
+    MOV AH, 02h
+    INT 21h
+
+    LEA DX, crash_line1      ; "CRITICAL FAILURE!\nRover crashed...("
+    MOV AH, 09h
+    INT 21h
+
+    MOV DL, rover_row        ; print row digit
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+
+    LEA DX, coord_comma      ; ","
+    MOV AH, 09h
+    INT 21h
+
+    MOV DL, rover_col        ; print col digit
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+
+    LEA DX, coord_close      ; ").\n"
+    MOV AH, 09h
+    INT 21h
+
+    LEA DX, aborted_msg      ; "Mission Aborted.\nPress any key..."
+    MOV AH, 09h
+    INT 21h
+
+    JMP DRAW_DONE
+
+    ; --------------------------------------------------------
+    ; BOUNDARY MESSAGE:
+    ; Error: Boundary breach!
+    ; Mission Aborted.
+    ; Press any key to exit...
+    ; --------------------------------------------------------
+DRAW_SHOW_BOUND:
+    LEA DX, bound_msg
+    MOV AH, 09h
+    INT 21h
+
+    JMP DRAW_DONE
+
+    ; --------------------------------------------------------
+    ; SUCCESS MESSAGE:
+    ; MISSION SUCCESS!
+    ; Rover reached coordinates: (R,C)
+    ; Fuel Consumed: X
+    ; Remaining Battery Level: XX Units
+    ; Press any key to exit...
+    ; --------------------------------------------------------
+DRAW_SHOW_SUCCESS:
+    LEA DX, success_line1    ; "MISSION SUCCESS!\nRover reached...("
+    MOV AH, 09h
+    INT 21h
+
+    MOV DL, rover_row        ; print row digit
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+
+    LEA DX, coord_comma      ; ","
+    MOV AH, 09h
+    INT 21h
+
+    MOV DL, rover_col        ; print col digit
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+
+    LEA DX, coord_close      ; ").\n"
+    MOV AH, 09h
+    INT 21h
+
+    ; --- Print "Fuel Consumed: " ---
+    LEA DX, fuel_consumed_msg
+    MOV AH, 09h
+    INT 21h
+
+    ; --- Calculate fuel consumed = 20 - fuel ---
+    MOV AL, initial_fuel
+    SUB AL, fuel             ; AL = amount consumed
+    MOV AH, 0
+    MOV BL, 10
+    DIV BL                   ; AL = tens, AH = ones
+    MOV BH, AH               ; save ones digit
+
+    ; Skip leading zero on tens digit
+    CMP AL, 0
+    JE SKIP_TENS
+    MOV DL, AL
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+SKIP_TENS:
+    MOV DL, BH               ; ones digit
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+
+    CALL PRINT_NEWLINE
+
+    ; --- Print "Remaining Battery Level: " ---
+    LEA DX, remaining_msg
+    MOV AH, 09h
+    INT 21h
+
+    ; --- Print remaining fuel ---
+    MOV AL, fuel
+    MOV AH, 0
+    MOV BL, 10
+    DIV BL
+    MOV BH, AH               ; save ones digit
+
+    ; Skip leading zero
+    CMP AL, 0
+    JE SKIP_BATT_TENS
+    MOV DL, AL
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+SKIP_BATT_TENS:
+    MOV DL, BH
+    ADD DL, '0'
+    MOV AH, 02h
+    INT 21h
+
+    ; --- Print " Units\n" ---
+    LEA DX, batt_units
+    MOV AH, 09h
+    INT 21h
+
+    ; --- Print "Press any key to exit..." ---
+    LEA DX, press_key_msg
+    MOV AH, 09h
+    INT 21h
+
+DRAW_DONE:
     POP SI
     POP DX
     POP CX
@@ -131,78 +349,8 @@ DRAW_CELL:
 DRAW_GRID ENDP
 
 ; ============================================================
-; PROCEDURE: CLEAR_OLD_ROVER  (private — called by DRAW_GRID)
-; Purpose:  Resets rover's current cell back to '.'
-;           Called automatically inside DRAW_GRID before
-;           stamping the rover at its new position.
-;           Do NOT call this directly from outside.
-; Inputs:   rover_row, rover_col, grid (from data.inc)
-; ============================================================
-CLEAR_OLD_ROVER PROC
-    PUSH AX
-    PUSH BX
-
-    MOV AL, rover_row
-    SHL AL, 1
-    SHL AL, 1
-    SHL AL, 1
-    ADD AL, rover_col
-    LEA BX, grid
-    MOV AH, 0
-    ADD BX, AX
-    MOV BYTE PTR [BX], '.'
-
-    POP BX
-    POP AX
-    RET
-CLEAR_OLD_ROVER ENDP
-
-; ============================================================
-; PROCEDURE: DISPLAY_STATUS_MSG
-; Purpose:  Prints end-of-game message
-; Inputs:   AL = 0 (success), 1 (crash), 2 (boundary)
-; ============================================================
-DISPLAY_STATUS_MSG PROC
-    PUSH AX
-    PUSH DX
-
-    CMP AL, 0
-    JE STAT_SUCCESS
-    CMP AL, 1
-    JE STAT_CRASH
-    CMP AL, 2
-    JE STAT_BOUND
-    JMP STAT_DONE
-
-STAT_SUCCESS:
-    LEA DX, success_msg
-    MOV AH, 09h
-    INT 21h
-    JMP STAT_DONE
-
-STAT_CRASH:
-    MOV DL, 07h              ; beep
-    MOV AH, 02h
-    INT 21h
-    LEA DX, crash_msg
-    MOV AH, 09h
-    INT 21h
-    JMP STAT_DONE
-
-STAT_BOUND:
-    LEA DX, bound_msg
-    MOV AH, 09h
-    INT 21h
-
-STAT_DONE:
-    POP DX
-    POP AX
-    RET
-DISPLAY_STATUS_MSG ENDP
-
-; ============================================================
 ; PROCEDURE: DELAY
-; Purpose:  Visible pause between animation frames
+; Visible pause between animation frames
 ; ============================================================
 DELAY PROC
     PUSH CX
@@ -215,8 +363,8 @@ DELAY_LOOP:
 DELAY ENDP
 
 ; ============================================================
-; PROCEDURE: INIT_GRID  (private — called by DRAW_GRID only)
-; Purpose:  Places 6 obstacles on the grid
+; PROCEDURE: INIT_GRID (private)
+; Places 6 obstacles into grid array from obstacles table
 ; ============================================================
 INIT_GRID PROC
     PUSH AX
@@ -228,12 +376,12 @@ INIT_GRID PROC
     MOV CL, 6
 
 PLACE_NEXT:
-    MOV AL, [SI]
+    MOV AL, [SI]             ; row
     SHL AL, 1
     SHL AL, 1
-    SHL AL, 1
+    SHL AL, 1                ; row * 8
     INC SI
-    ADD AL, [SI]
+    ADD AL, [SI]             ; + col = offset
     LEA BX, grid
     MOV AH, 0
     ADD BX, AX
@@ -250,7 +398,8 @@ PLACE_NEXT:
 INIT_GRID ENDP
 
 ; ============================================================
-; PROCEDURE: DISPLAY_BATTERY  (private — called by DRAW_GRID)
+; PROCEDURE: DISPLAY_BATTERY (private)
+; Prints "Battery Level: NN Units"
 ; ============================================================
 DISPLAY_BATTERY PROC
     PUSH AX
@@ -290,7 +439,7 @@ DISPLAY_BATTERY PROC
 DISPLAY_BATTERY ENDP
 
 ; ============================================================
-; PROCEDURE: PRINT_NEWLINE  (private helper)
+; PROCEDURE: PRINT_NEWLINE (private)
 ; ============================================================
 PRINT_NEWLINE PROC
     PUSH AX
@@ -309,7 +458,7 @@ PRINT_NEWLINE PROC
 PRINT_NEWLINE ENDP
 
 ; ============================================================
-; PROCEDURE: CLEAR_SCREEN  (private helper)
+; PROCEDURE: CLEAR_SCREEN (private)
 ; ============================================================
 CLEAR_SCREEN PROC
     PUSH AX
